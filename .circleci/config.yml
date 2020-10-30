@@ -1,0 +1,46 @@
+version: 2.1
+jobs:
+  build_python:
+    docker:
+      - image: circleci/python:3.7.3
+    steps:
+      - checkout
+      - run:
+          name: Create virtual environment
+          command: python3 -m venv venv
+      - run:
+          name: Install requirements and run build script
+          command: |
+            . venv/bin/activate
+            pip install --requirement requirements.txt
+            pip install --requirement dev_requirements.txt
+            ./dev-scripts/build-python
+  format_frontend:
+    docker:
+      - image: circleci/node:13.2.0-stretch
+    steps:
+      - checkout
+      - run:
+          name: Install prettier globally
+          command: npm install prettier@2.0.5
+      - run:
+          name: Check frontend formatting
+          command: ./dev-scripts/check-frontend-format
+  e2e:
+    machine:
+      # A Debian image would be better, as it matches Raspberry Pi OS more
+      # closely, but install fails with a Docker image because systemctl
+      # behaves differently under docker.
+      image: ubuntu-1604:202007-01
+    steps:
+      - checkout
+      - run:
+          name: Install TinyPilot
+          command: ./quick-install
+      # TODO: Check that TinyPilot's web interface is up and running.
+workflows:
+  test:
+    jobs:
+      - build_python
+      - format_frontend
+      - e2e
